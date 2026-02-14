@@ -323,9 +323,9 @@ const ReactGUI = () => {
           官方文档
         </Button>
       </Tooltip>
-      <Tooltip content="导出课表" relationship="label">
-        <Button icon={<CalendarLtr20Regular />}>
-          导出课表(TODO)
+      <Tooltip content="打开课表配置文件夹进行编辑" relationship="label">
+        <Button icon={<CalendarLtr20Regular />} onClick={() => ipcRenderer.send('open-config-folder')}>
+          编辑课表
         </Button>
       </Tooltip>
       <Tooltip content="分享课表" relationship="label">
