@@ -6,7 +6,9 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   width: 100%;
   overflow: hidden;
@@ -63,6 +65,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -74,6 +77,7 @@ body {
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -81,9 +85,12 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
@@ -195,7 +202,7 @@ body {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .content-grid {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
@@ -205,20 +212,20 @@ body {
   .sidebar {
     width: 240px;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-  
+
   .content-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .header {
     padding: 16px 20px;
   }
-  
+
   .content-area {
     padding: 16px 20px;
   }
@@ -228,38 +235,38 @@ body {
   .app-container {
     flex-direction: column;
   }
-  
+
   .sidebar {
     width: 100%;
     height: auto;
     flex-direction: row;
     padding: 8px 12px;
   }
-  
+
   .sidebar-header {
     display: none;
   }
-  
+
   .sidebar-content {
     flex-direction: row;
     gap: 8px;
     padding: 0;
   }
-  
+
   .nav-button {
     flex: 1;
     justify-content: center;
     height: 40px;
   }
-  
+
   .sidebar-footer {
     display: none;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .stat-value {
     font-size: 24px;
   }
@@ -267,12 +274,13 @@ body {
 
 /* 打印样式 */
 @media print {
+
   .sidebar,
   .quick-actions,
   .extension-placeholder {
     display: none;
   }
-  
+
   .main-content {
     margin-left: 0;
   }
@@ -283,7 +291,7 @@ body {
   .fui-Card {
     border: 2px solid currentColor;
   }
-  
+
   .fui-Button {
     border: 2px solid currentColor;
   }
@@ -291,6 +299,7 @@ body {
 
 /* 减少动画偏好 */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
