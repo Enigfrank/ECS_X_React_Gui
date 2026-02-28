@@ -50,6 +50,7 @@ import {
   Wifi,
   Lock,
   Save,
+  FolderOpen,
 } from 'lucide-react';
 
 const { ipcRenderer } = window.require('electron');
@@ -401,15 +402,71 @@ const SettingsView = ({ settings, handleSettingChange, mutedTextColor, borderCol
   );
 };
 
-const ToolsView = ({ useColorModeValue }) => {
+const ToolsView = ({
+  useColorModeValue,
+  logs,
+  isLoadingLogs,
+  loadLogs,
+  openLogsFolder
+}) => {
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const textMuted = useColorModeValue('gray.600', 'gray.400');
+
   return (
     <>
-      <Text fontSize="xl" fontWeight="semibold" mt={6} mb={4}>系统诊断(N/A)</Text>
+      <Text fontSize="xl" fontWeight="semibold" mt={6} mb={4}>系统诊断</Text>
       <Card>
         <CardBody>
-          <Text>应用运行日志和系统诊断信息将在这里显示</Text>
-          <Box mt={3}>
-            <Button leftIcon={<Wrench size={16} />} isDisabled>查看日志(N/A)</Button>
+          <Text fontSize="lg" fontWeight="medium" mb={3}>应用运行日志</Text>
+
+          {logs.length === 0 && !isLoadingLogs ? (
+            <Text color={textMuted} fontSize="sm">
+              暂无日志内容，点击"加载日志"按钮查看最新日志
+            </Text>
+          ) : (
+            <Box
+              h="300px"
+              maxH="300px"
+              overflowY="auto"
+              p={3}
+              bg={useColorModeValue('gray.50', 'gray.900')}
+              borderRadius="md"
+              border="1px"
+              borderColor={borderColor}
+              fontSize="sm"
+              fontFamily="monospace"
+              display="flex"
+              flexDirection="column"
+            >
+              {isLoadingLogs ? (
+                <Text color={textMuted}>正在加载日志...</Text>
+              ) : (
+                logs.map((log, index) => (
+                  <Text key={index} fontSize="xs" mb={1}>
+                    {log}
+                  </Text>
+                ))
+              )}
+            </Box>
+          )}
+
+          <Box mt={4} display="flex" gap={2}>
+            <Button
+              leftIcon={<Wrench size={16} />}
+              onClick={loadLogs}
+              isLoading={isLoadingLogs}
+              loadingText="加载中..."
+            >
+              加载日志
+            </Button>
+            <Button
+              leftIcon={<FolderOpen size={16} />}
+              onClick={openLogsFolder}
+              variant="outline"
+            >
+              打开日志文件夹
+            </Button>
           </Box>
         </CardBody>
       </Card>
@@ -422,6 +479,7 @@ const AssignmentView = ({
   wsStatus,
   isTestingConnection,
   isSaving,
+  isRegistering,
   getConnectionStatusColor,
   getConnectionStatusText,
   useColorModeValue,
@@ -431,7 +489,8 @@ const AssignmentView = ({
   customTimeRef,
   handleAssignmentSettingChange,
   handleTestConnection,
-  handleSaveAssignmentConfig
+  handleSaveAssignmentConfig,
+  handleRegisterClient
 }) => {
   return (
     <>
@@ -535,6 +594,15 @@ const AssignmentView = ({
             >
               {isTestingConnection ? '测试中...' : '测试连接'}
             </Button>
+            <Button
+              variant="outline"
+              ml={3}
+              onClick={handleRegisterClient}
+              isDisabled={!assignmentSettings.enabled || assignmentSettings.clientId || !clientNameRef.current?.value || isRegistering}
+              colorScheme={assignmentSettings.clientId ? 'gray' : 'blue'}
+            >
+              {isRegistering ? '注册中...' : assignmentSettings.clientId ? '已注册' : '注册客户端'}
+            </Button>
           </Box>
         </CardBody>
       </Card>
@@ -622,6 +690,10 @@ const ReactGUI = () => {
   const [wsStatus, setWsStatus] = useState('disconnected');
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+
 
   const serverUrlRef = useRef(null);
   const clientNameRef = useRef(null);
@@ -745,6 +817,28 @@ const ReactGUI = () => {
     }));
   };
 
+  const loadLogs = async () => {
+    setIsLoadingLogs(true);
+    try {
+      const result = await ipcRenderer.invoke('get-logs');
+      if (result && result.success) {
+        setLogs(result.logs || []);
+      } else {
+        setLogs(['无法读取日志文件']);
+      }
+    } catch (error) {
+      setLogs([`读取日志失败: ${error.message}`]);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  const openLogsFolder = () => {
+    ipcRenderer.send('open-logs-folder');
+  };
+
+
+
   const handleTestConnection = async () => {
     setIsTestingConnection(true);
     setWsStatus('connecting');
@@ -797,6 +891,44 @@ const ReactGUI = () => {
     }
   };
 
+  /**
+   * 处理注册客户端
+   */
+  const handleRegisterClient = async () => {
+    if (!clientNameRef.current?.value) {
+      return;
+    }
+
+    setIsRegistering(true);
+    try {
+      const serverUrl = serverUrlRef.current?.value || assignmentSettings.serverUrl;
+      const clientName = clientNameRef.current.value;
+
+      handleAssignmentSettingChange('serverUrl', serverUrl);
+      handleAssignmentSettingChange('clientName', clientName);
+
+      const configToSave = {
+        assignmentEnabled: assignmentSettings.enabled,
+        serverURL: serverUrl,
+        wsURL: serverUrl ? serverUrl.replace('http', 'ws') : '',
+        clientName: clientName,
+        clientId: null,
+        assignmentDisplayPeriod: assignmentSettings.displayTiming === 'customTime'
+          ? `time:${assignmentSettings.customTime}`
+          : -1
+      };
+
+      const result = await ipcRenderer.invoke('saveAssignmentConfig', configToSave);
+      setIsRegistering(false);
+
+      if (result && result.success && result.clientId) {
+        setAssignmentSettings(prev => ({ ...prev, clientId: result.clientId }));
+      }
+    } catch (error) {
+      setIsRegistering(false);
+    }
+  };
+
   const getConnectionStatusColor = (status) => {
     switch (status) {
       case 'connected':
@@ -812,7 +944,7 @@ const ReactGUI = () => {
   const getConnectionStatusText = (status) => {
     switch (status) {
       case 'connected':
-        return '连接成功,请保存配置!';
+        return '通信正常!';
       case 'connecting':
         return '连接中...';
       case 'disconnected':
@@ -949,6 +1081,7 @@ const ReactGUI = () => {
               wsStatus={wsStatus}
               isTestingConnection={isTestingConnection}
               isSaving={isSaving}
+              isRegistering={isRegistering}
               getConnectionStatusColor={getConnectionStatusColor}
               getConnectionStatusText={getConnectionStatusText}
               useColorModeValue={useColorModeValue}
@@ -959,6 +1092,7 @@ const ReactGUI = () => {
               handleAssignmentSettingChange={handleAssignmentSettingChange}
               handleTestConnection={handleTestConnection}
               handleSaveAssignmentConfig={handleSaveAssignmentConfig}
+              handleRegisterClient={handleRegisterClient}
             />
           )}
           {currentView === 'settings' && (
@@ -972,6 +1106,10 @@ const ReactGUI = () => {
           {currentView === 'tools' && (
             <ToolsView
               useColorModeValue={useColorModeValue}
+              logs={logs}
+              isLoadingLogs={isLoadingLogs}
+              loadLogs={loadLogs}
+              openLogsFolder={openLogsFolder}
             />
           )}
         </Box>
