@@ -369,9 +369,21 @@ const SettingsView = ({ settings, handleSettingChange, mutedTextColor, borderCol
         </CardBody>
       </Card>
 
-      <Text fontSize="xl" fontWeight="semibold" mt={6} mb={4}>高级设置(未实现)</Text>
+      <Text fontSize="xl" fontWeight="semibold" mt={6} mb={4}>高级设置</Text>
       <Card>
         <CardBody>
+          <Flex align="center" justify="space-between" py={4} borderBottom="1px" borderColor={borderColor}>
+            <Flex align="center" gap={3}>
+              <Settings size={20} />
+              <Box>
+                <Text fontWeight="semibold">重新运行引导</Text>
+                <Text fontSize="sm" color={mutedTextColor} display="block">
+                  重新打开OOBE初始设置向导
+                </Text>
+              </Box>
+            </Flex>
+            <Button size="sm" variant="outline" onClick={() => ipcRenderer.send('open-oobe')}>运行</Button>
+          </Flex>
           <Flex align="center" justify="space-between" py={4} borderBottom="1px" borderColor={borderColor}>
             <Flex align="center" gap={3}>
               <Settings size={20} />
